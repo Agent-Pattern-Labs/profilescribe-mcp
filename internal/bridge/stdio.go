@@ -2,35 +2,48 @@ package bridge
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 )
 
-func readMessage(reader *bufio.Reader) ([]byte, error) {
+type messageFraming int
+
+const (
+	contentLengthFraming messageFraming = iota
+	newlineFraming
+)
+
+type incomingMessage struct {
+	payload []byte
+	framing messageFraming
+}
+
+func readMessage(reader *bufio.Reader) (incomingMessage, error) {
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			return nil, err
+			return incomingMessage{}, err
 		}
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
 			continue
 		}
 		if strings.HasPrefix(trimmed, "{") {
-			return []byte(trimmed), nil
+			return incomingMessage{payload: []byte(trimmed), framing: newlineFraming}, nil
 		}
 
 		contentLength, err := parseHeader(trimmed)
 		if err != nil {
-			return nil, err
+			return incomingMessage{}, err
 		}
 
 		for {
 			headerLine, err := reader.ReadString('\n')
 			if err != nil {
-				return nil, err
+				return incomingMessage{}, err
 			}
 			trimmedHeader := strings.TrimSpace(headerLine)
 			if trimmedHeader == "" {
@@ -39,7 +52,7 @@ func readMessage(reader *bufio.Reader) ([]byte, error) {
 
 			parsedLength, err := parseHeader(trimmedHeader)
 			if err != nil {
-				return nil, err
+				return incomingMessage{}, err
 			}
 			if parsedLength > 0 {
 				contentLength = parsedLength
@@ -47,18 +60,29 @@ func readMessage(reader *bufio.Reader) ([]byte, error) {
 		}
 
 		if contentLength <= 0 {
-			return nil, fmt.Errorf("missing Content-Length header")
+			return incomingMessage{}, fmt.Errorf("missing Content-Length header")
 		}
 
 		payload := make([]byte, contentLength)
 		if _, err := io.ReadFull(reader, payload); err != nil {
-			return nil, err
+			return incomingMessage{}, err
 		}
-		return payload, nil
+		return incomingMessage{payload: payload, framing: contentLengthFraming}, nil
 	}
 }
 
-func writeMessage(writer *bufio.Writer, payload []byte) error {
+func writeMessage(writer *bufio.Writer, payload []byte, framing messageFraming) error {
+	if framing == newlineFraming {
+		payload = bytes.TrimSpace(payload)
+		if _, err := writer.Write(payload); err != nil {
+			return err
+		}
+		if err := writer.WriteByte('\n'); err != nil {
+			return err
+		}
+		return writer.Flush()
+	}
+
 	if _, err := fmt.Fprintf(writer, "Content-Length: %d\r\n\r\n", len(payload)); err != nil {
 		return err
 	}

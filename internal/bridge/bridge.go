@@ -26,20 +26,21 @@ func Run(ctx context.Context, cfg Config, input io.Reader, output io.Writer, log
 	defer writer.Flush()
 
 	for {
-		payload, err := readMessage(reader)
+		msg, err := readMessage(reader)
 		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		if err != nil {
 			return err
 		}
+		payload := msg.payload
 		if len(bytes.TrimSpace(payload)) == 0 {
 			continue
 		}
 
 		var req rpcRequest
 		if err := json.Unmarshal(payload, &req); err != nil {
-			if err := writeMessage(writer, errorResponse(nil, -32700, "parse error")); err != nil {
+			if err := writeMessage(writer, errorResponse(nil, -32700, "parse error"), msg.framing); err != nil {
 				return err
 			}
 			continue
@@ -51,12 +52,12 @@ func Run(ctx context.Context, cfg Config, input io.Reader, output io.Writer, log
 
 		responsePayload, err := callProfileScribe(ctx, client, cfg, payload)
 		if err != nil {
-			if err := writeMessage(writer, errorResponse(req.ID, -32000, err.Error())); err != nil {
+			if err := writeMessage(writer, errorResponse(req.ID, -32000, err.Error()), msg.framing); err != nil {
 				return err
 			}
 			continue
 		}
-		if err := writeMessage(writer, responsePayload); err != nil {
+		if err := writeMessage(writer, responsePayload, msg.framing); err != nil {
 			return err
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -87,7 +88,7 @@ func TestRunWritesJSONRPCErrorForHTTPFailure(t *testing.T) {
 	}))
 	defer server.Close()
 
-	input := strings.NewReader(`{"jsonrpc":"2.0","id":"abc","method":"tools/list"}` + "\n")
+	input := strings.NewReader(frameContentLength(`{"jsonrpc":"2.0","id":"abc","method":"tools/list"}`))
 	var output bytes.Buffer
 
 	err := Run(context.Background(), Config{
@@ -109,6 +110,29 @@ func TestRunWritesJSONRPCErrorForHTTPFailure(t *testing.T) {
 	}
 }
 
+func TestRunMirrorsNewlineFraming(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}`))
+	}))
+	defer server.Close()
+
+	input := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}` + "\n")
+	var output bytes.Buffer
+
+	err := Run(context.Background(), Config{
+		MCPURL:     server.URL,
+		AgentToken: "psagt_test",
+		Timeout:    time.Second,
+	}, input, &output, log.New(io.Discard, "", 0))
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if got := output.String(); got != "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"tools\":[]}}\n" {
+		t.Fatalf("output = %q", got)
+	}
+}
+
 func TestRunWritesParseError(t *testing.T) {
 	var output bytes.Buffer
 	err := Run(context.Background(), Config{
@@ -120,7 +144,7 @@ func TestRunWritesParseError(t *testing.T) {
 		t.Fatalf("Run returned error: %v", err)
 	}
 
-	payload := stripFrame(t, output.String())
+	payload := strings.TrimSpace(output.String())
 	var response rpcResponse
 	if err := json.Unmarshal([]byte(payload), &response); err != nil {
 		t.Fatalf("unmarshal response: %v", err)
@@ -128,6 +152,10 @@ func TestRunWritesParseError(t *testing.T) {
 	if response.Error == nil || response.Error.Code != -32700 {
 		t.Fatalf("response error = %#v", response.Error)
 	}
+}
+
+func frameContentLength(payload string) string {
+	return "Content-Length: " + strconv.Itoa(len(payload)) + "\r\n\r\n" + payload
 }
 
 func stripFrame(t *testing.T, framed string) string {

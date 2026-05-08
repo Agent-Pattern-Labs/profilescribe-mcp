@@ -50,7 +50,8 @@ Supported environment:
 ## MCP Behavior
 
 - Support standard `Content-Length` stdio framing.
-- Accept newline-delimited JSON only as a local smoke-test convenience.
+- Support newline-delimited JSON for MCP clients that use line-oriented stdio transport.
+- Mirror the request framing in each response.
 - Forward request payloads without rewriting tool arguments.
 - Ignore JSON-RPC notifications because notifications do not have responses.
 - Return JSON-RPC error responses for parse, HTTP, and upstream failures.
@@ -80,4 +81,3 @@ make build
 ```
 
 Before committing code changes, run `go test ./...`. For protocol or config changes, also run `make build` and a small stdio smoke test when practical.
-
