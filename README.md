@@ -202,6 +202,12 @@ ProfileScribe currently exposes:
 
 There is intentionally no publish tool. Agents can draft or propose; users approve inside ProfileScribe.
 
+For local profile/header image uploads, the bridge accepts an `imagePath`
+argument on `upload_profile_image` in addition to the hosted API's
+`imageBase64` argument. The bridge reads the local file, converts it to
+base64, and forwards the standard hosted MCP request. The file must be JPEG,
+PNG, WEBP, or GIF after ProfileScribe validation and must be under 8MB.
+
 ## Development
 
 ```bash

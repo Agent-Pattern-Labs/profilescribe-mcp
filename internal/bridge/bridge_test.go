@@ -3,11 +3,14 @@ package bridge
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -133,6 +136,106 @@ func TestRunMirrorsNewlineFraming(t *testing.T) {
 	}
 }
 
+func TestRunAdvertisesImagePathForUploadProfileImage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"upload_profile_image","description":"Upload base64-encoded profile or header image bytes.","inputSchema":{"type":"object","required":["kind","imageBase64"],"properties":{"kind":{"type":"string","enum":["profile","header"]},"imageBase64":{"type":"string"}}}}]}}`))
+	}))
+	defer server.Close()
+
+	input := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}` + "\n")
+	var output bytes.Buffer
+
+	err := Run(context.Background(), Config{
+		MCPURL:     server.URL,
+		AgentToken: "psagt_test",
+		Timeout:    time.Second,
+	}, input, &output, log.New(io.Discard, "", 0))
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	var response struct {
+		Result struct {
+			Tools []struct {
+				InputSchema struct {
+					Required   []string                  `json:"required"`
+					Properties map[string]map[string]any `json:"properties"`
+				} `json:"inputSchema"`
+			} `json:"tools"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(bytes.TrimSpace(output.Bytes()), &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if len(response.Result.Tools) != 1 {
+		t.Fatalf("tools = %#v", response.Result.Tools)
+	}
+	if got := strings.Join(response.Result.Tools[0].InputSchema.Required, ","); got != "kind" {
+		t.Fatalf("required = %q", got)
+	}
+	if _, ok := response.Result.Tools[0].InputSchema.Properties["imagePath"]; !ok {
+		t.Fatalf("imagePath was not advertised: %#v", response.Result.Tools[0].InputSchema.Properties)
+	}
+}
+
+func TestRunExpandsUploadProfileImagePath(t *testing.T) {
+	imagePath := filepath.Join(t.TempDir(), "avatar.png")
+	if err := os.WriteFile(imagePath, testPNG(), 0o600); err != nil {
+		t.Fatalf("write test image: %v", err)
+	}
+
+	var sawImageBase64 atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Method string `json:"method"`
+			Params struct {
+				Name      string `json:"name"`
+				Arguments struct {
+					Kind        string `json:"kind"`
+					ImageBase64 string `json:"imageBase64"`
+					ImagePath   string `json:"imagePath"`
+				} `json:"arguments"`
+			} `json:"params"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if request.Method != "tools/call" || request.Params.Name != "upload_profile_image" {
+			t.Fatalf("unexpected request = %#v", request)
+		}
+		if request.Params.Arguments.ImagePath != "" {
+			t.Fatalf("imagePath should not be forwarded")
+		}
+		content, err := base64.StdEncoding.DecodeString(request.Params.Arguments.ImageBase64)
+		if err != nil {
+			t.Fatalf("decode imageBase64: %v", err)
+		}
+		if !bytes.Equal(content, testPNG()) {
+			t.Fatalf("imageBase64 content mismatch")
+		}
+		sawImageBase64.Store(true)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{}"}]}}`))
+	}))
+	defer server.Close()
+
+	input := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"upload_profile_image","arguments":{"kind":"profile","imagePath":"` + imagePath + `"}}}` + "\n")
+	var output bytes.Buffer
+
+	err := Run(context.Background(), Config{
+		MCPURL:     server.URL,
+		AgentToken: "psagt_test",
+		Timeout:    time.Second,
+	}, input, &output, log.New(io.Discard, "", 0))
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if !sawImageBase64.Load() {
+		t.Fatal("ProfileScribe request did not include imageBase64")
+	}
+}
+
 func TestRunWritesParseError(t *testing.T) {
 	var output bytes.Buffer
 	err := Run(context.Background(), Config{
@@ -165,4 +268,9 @@ func stripFrame(t *testing.T, framed string) string {
 		t.Fatalf("invalid frame = %q", framed)
 	}
 	return parts[1]
+}
+
+func testPNG() []byte {
+	content, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=")
+	return content
 }

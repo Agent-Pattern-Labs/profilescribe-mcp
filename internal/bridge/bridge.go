@@ -50,13 +50,22 @@ func Run(ctx context.Context, cfg Config, input io.Reader, output io.Writer, log
 			continue
 		}
 
-		responsePayload, err := callProfileScribe(ctx, client, cfg, payload)
+		forwardPayload, err := preparePayload(payload)
+		if err != nil {
+			if err := writeMessage(writer, errorResponse(req.ID, -32602, err.Error()), msg.framing); err != nil {
+				return err
+			}
+			continue
+		}
+
+		responsePayload, err := callProfileScribe(ctx, client, cfg, forwardPayload)
 		if err != nil {
 			if err := writeMessage(writer, errorResponse(req.ID, -32000, err.Error()), msg.framing); err != nil {
 				return err
 			}
 			continue
 		}
+		responsePayload = prepareResponse(req.Method, responsePayload)
 		if err := writeMessage(writer, responsePayload, msg.framing); err != nil {
 			return err
 		}

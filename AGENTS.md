@@ -11,6 +11,8 @@ This repository should stay small, installable, and safe to publish. Its purpose
 - **Tool name:** `profilescribe-mcp`
 - **GitHub repo:** `github.com/razroo/profilescribe-mcp`
 - **Upstream product:** ProfileScribe at `profilescribe.com`
+- **Main app/API repo:** `/Users/charlie/Razroo/profile-scribe`
+- **User profile workspace:** `/Users/charlie/Razroo/profile-scribe-charlie`
 - **Default MCP endpoint:** `https://profilescribe.com/api/mcp`
 
 ## Scope
@@ -52,7 +54,9 @@ Supported environment:
 - Support standard `Content-Length` stdio framing.
 - Support newline-delimited JSON for MCP clients that use line-oriented stdio transport.
 - Mirror the request framing in each response.
-- Forward request payloads without rewriting tool arguments.
+- Forward request payloads without rewriting tool arguments, except for local
+  convenience fields explicitly owned by this bridge, such as converting
+  `upload_profile_image.imagePath` to `imageBase64` before forwarding.
 - Ignore JSON-RPC notifications because notifications do not have responses.
 - Return JSON-RPC error responses for parse, HTTP, and upstream failures.
 - Keep stdout reserved for MCP protocol frames. Logs and diagnostics go to stderr.
@@ -65,10 +69,16 @@ ProfileScribe currently exposes these MCP tools through the hosted endpoint:
 - `read_sources`
 - `add_source`
 - `update_source`
+- `read_source_checkpoints`
+- `update_source_checkpoint`
+- `create_source_observation`
+- `read_fact_candidates`
+- `create_fact_candidate`
+- `upload_profile_image`
 - `propose_profile_edit`
 - `create_timeline_draft`
 
-The bridge should not hard-code tool behavior beyond forwarding MCP requests. Tool ownership belongs to the hosted ProfileScribe API.
+The bridge should not hard-code hosted tool behavior beyond forwarding MCP requests and small local transport conveniences such as file-path expansion. Tool ownership belongs to the hosted ProfileScribe API. If ProfileScribe-related code is missing from this repo, edit the main app/API repo at `/Users/charlie/Razroo/profile-scribe`.
 
 ## Development
 
