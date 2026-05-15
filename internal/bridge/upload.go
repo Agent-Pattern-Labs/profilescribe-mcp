@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -44,6 +45,10 @@ func preparePayload(payload []byte) ([]byte, error) {
 	}
 	if imageBase64, _ := arguments["imageBase64"].(string); strings.TrimSpace(imageBase64) != "" {
 		return nil, errors.New("upload_profile_image accepts imagePath or imageBase64, not both")
+	}
+	imagePath, err := expandLocalImagePath(imagePath)
+	if err != nil {
+		return nil, err
 	}
 
 	info, err := os.Stat(imagePath)
@@ -87,6 +92,20 @@ func preparePayload(payload []byte) ([]byte, error) {
 	req.Params = nextParams
 
 	return json.Marshal(req)
+}
+
+func expandLocalImagePath(imagePath string) (string, error) {
+	if imagePath == "~" || strings.HasPrefix(imagePath, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("expand imagePath: %w", err)
+		}
+		if imagePath == "~" {
+			return home, nil
+		}
+		return filepath.Join(home, strings.TrimPrefix(imagePath, "~/")), nil
+	}
+	return imagePath, nil
 }
 
 func prepareResponse(method string, payload []byte) []byte {

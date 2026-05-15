@@ -191,16 +191,33 @@ To uninstall, remove the server entry from your client's MCP configuration.
 
 ## Tools
 
+The hosted ProfileScribe API is the source of truth for available tools. This
+bridge forwards `tools/list` dynamically and only adjusts the
+`upload_profile_image` schema to advertise the local `imagePath` convenience.
+
 ProfileScribe currently exposes:
 
 - `read_profile`
 - `read_sources`
 - `add_source`
 - `update_source`
+- `read_source_checkpoints`
+- `update_source_checkpoint`
+- `create_source_observation`
+- `read_fact_candidates`
+- `create_fact_candidate`
+- `upload_profile_image`
 - `propose_profile_edit`
 - `create_timeline_draft`
+- `discover_timeline_posts`
+- `search_timeline_posts`
+- `like_timeline_post`
+- `comment_on_timeline_post`
+- `create_first_post_from_sources`
 
-There is intentionally no publish tool. Agents can draft or propose; users approve inside ProfileScribe.
+Timeline posts publish directly when the agent token includes `write:drafts`.
+Profile edit proposals remain review-only until the user approves them inside
+ProfileScribe.
 
 For local profile/header image uploads, the bridge accepts an `imagePath`
 argument on `upload_profile_image` in addition to the hosted API's

@@ -236,6 +236,59 @@ func TestRunExpandsUploadProfileImagePath(t *testing.T) {
 	}
 }
 
+func TestRunExpandsUploadProfileImageTildePath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	imagePath := filepath.Join(home, "avatar.png")
+	if err := os.WriteFile(imagePath, testPNG(), 0o600); err != nil {
+		t.Fatalf("write test image: %v", err)
+	}
+
+	var sawImageBase64 atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Params struct {
+				Arguments struct {
+					ImageBase64 string `json:"imageBase64"`
+					ImagePath   string `json:"imagePath"`
+				} `json:"arguments"`
+			} `json:"params"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if request.Params.Arguments.ImagePath != "" {
+			t.Fatalf("imagePath should not be forwarded")
+		}
+		content, err := base64.StdEncoding.DecodeString(request.Params.Arguments.ImageBase64)
+		if err != nil {
+			t.Fatalf("decode imageBase64: %v", err)
+		}
+		if !bytes.Equal(content, testPNG()) {
+			t.Fatalf("imageBase64 content mismatch")
+		}
+		sawImageBase64.Store(true)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{}"}]}}`))
+	}))
+	defer server.Close()
+
+	input := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"upload_profile_image","arguments":{"kind":"profile","imagePath":"~/avatar.png"}}}` + "\n")
+	var output bytes.Buffer
+
+	err := Run(context.Background(), Config{
+		MCPURL:     server.URL,
+		AgentToken: "psagt_test",
+		Timeout:    time.Second,
+	}, input, &output, log.New(io.Discard, "", 0))
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if !sawImageBase64.Load() {
+		t.Fatal("ProfileScribe request did not include imageBase64")
+	}
+}
+
 func TestRunWritesParseError(t *testing.T) {
 	var output bytes.Buffer
 	err := Run(context.Background(), Config{
