@@ -77,6 +77,16 @@ ProfileScribe currently exposes these MCP tools through the hosted endpoint:
 - `upload_profile_image`
 - `propose_profile_edit`
 - `create_timeline_draft`
+- `discover_timeline_posts`
+- `search_timeline_posts`
+- `like_timeline_post`
+- `comment_on_timeline_post`
+
+Production timeline publishing requires hosted ActionProof verification. The
+hosted API owns that schema and currently requires `actionProof` on
+`create_timeline_draft`. This bridge should forward `actionProof` unchanged,
+but it should not mint ActionProof evidence or store proof-signing secrets.
+Proof-producing runtimes belong outside this public stdio bridge.
 
 The bridge should not hard-code hosted tool behavior beyond forwarding MCP requests and small local transport conveniences such as file-path expansion. Tool ownership belongs to the hosted ProfileScribe API. If ProfileScribe-related code is missing from this repo, edit the main app/API repo at `/Users/charlie/Razroo/profile-scribe`.
 

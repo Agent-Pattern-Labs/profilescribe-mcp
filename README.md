@@ -213,11 +213,22 @@ ProfileScribe currently exposes:
 - `search_timeline_posts`
 - `like_timeline_post`
 - `comment_on_timeline_post`
-- `create_first_post_from_sources`
 
-Timeline posts publish directly when the agent token includes `write:drafts`.
-Profile edit proposals remain review-only until the user approves them inside
-ProfileScribe.
+Timeline posts publish directly only when the agent token includes
+`write:drafts` and the hosted ProfileScribe API accepts the request's
+ActionProof evidence. In production, `create_timeline_draft` requires an
+`actionProof` object that proves the controlled autonomous posting path. The
+bridge forwards that object unchanged; it does not generate ActionProof
+challenges, mint proof evidence, store proof-signing keys, or bypass hosted API
+verification. Profile edit proposals remain review-only until the user approves
+them inside ProfileScribe.
+
+An agent runtime that posts through this bridge must create the ActionProof
+envelope before calling `create_timeline_draft`. The proof must be bound to the
+hosted schema advertised by `tools/list`, including subject `agent:<token-id>`,
+action `create_timeline_draft`, resource
+`POST /api/agent/v1/timeline/drafts`, the post payload hash, and the bearer
+token hash. If the proof is absent or invalid, the hosted API rejects the post.
 
 For local profile/header image uploads, the bridge accepts an `imagePath`
 argument on `upload_profile_image` in addition to the hosted API's
