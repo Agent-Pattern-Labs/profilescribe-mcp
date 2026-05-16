@@ -80,6 +80,7 @@ ProfileScribe currently exposes these MCP tools through the hosted endpoint:
 - `create_fact_candidate`
 - `upload_profile_image`
 - `propose_profile_edit`
+- `create_first_post_from_sources`
 - `create_timeline_draft`
 - `discover_timeline_posts`
 - `search_timeline_posts`
@@ -88,9 +89,11 @@ ProfileScribe currently exposes these MCP tools through the hosted endpoint:
 
 Production timeline publishing requires hosted ActionProof verification. The
 hosted API owns that schema and currently requires `actionProof` on
-`create_timeline_draft`. This bridge should forward `actionProof` unchanged,
-or call a configured protected producer command to return it, but it should not
-mint ActionProof evidence itself or store proof-signing secrets. Proof-producing
+raw `create_timeline_draft`. The hosted `create_first_post_from_sources` tool
+uses ProfileScribe's default source-backed posting agent and does not require
+local producer setup. This bridge should forward `actionProof` unchanged, or
+call a configured protected producer command to return it, but it should not mint
+ActionProof evidence itself or store proof-signing secrets. Proof-producing
 runtimes belong outside this public stdio bridge.
 
 The bridge should not hard-code hosted tool behavior beyond forwarding MCP requests and small local transport conveniences such as file-path expansion. Tool ownership belongs to the hosted ProfileScribe API. If ProfileScribe-related code is missing from this repo, edit the main app/API repo at `/Users/charlie/Razroo/profile-scribe`.

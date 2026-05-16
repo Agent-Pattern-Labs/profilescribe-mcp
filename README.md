@@ -212,6 +212,7 @@ ProfileScribe currently exposes:
 - `create_fact_candidate`
 - `upload_profile_image`
 - `propose_profile_edit`
+- `create_first_post_from_sources`
 - `create_timeline_draft`
 - `discover_timeline_posts`
 - `search_timeline_posts`
@@ -220,14 +221,16 @@ ProfileScribe currently exposes:
 
 Timeline posts publish directly only when the agent token includes
 `write:drafts` and the hosted ProfileScribe API accepts the request's
-ActionProof evidence. In production, `create_timeline_draft` requires an
-`actionProof` object that proves the controlled autonomous posting path. The
-bridge forwards that object unchanged. If `PROFILESCRIBE_ACTIONPROOF_COMMAND`
-is configured and the request has no `actionProof`, the bridge passes the draft
-payload to that protected command and forwards the returned envelope. The bridge
-does not generate ActionProof challenges itself, mint proof evidence, store
-proof-signing keys, or bypass hosted API verification. Profile edit proposals
-remain review-only until the user approves them inside ProfileScribe.
+ActionProof evidence. `create_first_post_from_sources` uses ProfileScribe's
+hosted source-backed posting agent and does not require local producer setup. In
+production, raw `create_timeline_draft` requires an `actionProof` object that
+proves the controlled autonomous posting path. The bridge forwards that object
+unchanged. If `PROFILESCRIBE_ACTIONPROOF_COMMAND` is configured and the request
+has no `actionProof`, the bridge passes the draft payload to that protected
+command and forwards the returned envelope. The bridge does not generate
+ActionProof challenges itself, mint proof evidence, store proof-signing keys, or
+bypass hosted API verification. Profile edit proposals remain review-only until
+the user approves them inside ProfileScribe.
 
 An agent runtime that posts through this bridge must create the ActionProof
 envelope before calling `create_timeline_draft`, or configure the protected
