@@ -214,6 +214,7 @@ ProfileScribe currently exposes:
 - `propose_profile_edit`
 - `create_first_post_from_sources`
 - `create_timeline_draft`
+- `create_source_backed_timeline_post`
 - `discover_timeline_posts`
 - `search_timeline_posts`
 - `like_timeline_post`
@@ -223,11 +224,12 @@ Timeline posts publish directly only when the agent token includes
 `write:drafts` and the hosted ProfileScribe API accepts the request's
 ActionProof evidence. `create_first_post_from_sources` is only for bootstrapping
 the profile's first source-backed timeline post and does not require local
-producer setup. For later autonomous updates, use `create_timeline_draft` with a
-specific, meaningful update grounded in real work or other verifiable
-professional evidence. Do not use the first-post tool for routine source changes
-or generic crawl summaries. Production raw `create_timeline_draft` requires an
-`actionProof` object that proves the controlled autonomous posting path. The
+producer setup. For later hosted updates, use
+`create_source_backed_timeline_post` with a specific, meaningful update grounded
+in real work or other verifiable professional evidence. Do not use the
+first-post tool for routine source changes or generic crawl summaries.
+Production raw `create_timeline_draft` requires an `actionProof` object that
+proves the controlled autonomous posting path. The
 bridge forwards that object unchanged. If `PROFILESCRIBE_ACTIONPROOF_COMMAND` is
 configured and the request has no `actionProof`, the bridge passes the draft
 payload to that protected command and forwards the returned envelope. The bridge
