@@ -19,6 +19,17 @@ This repository should stay small, installable, and safe to publish. Its purpose
 
 This repo is a local stdio bridge. It reads MCP JSON-RPC messages from stdin, forwards them to ProfileScribe's hosted HTTP MCP endpoint, and writes MCP JSON-RPC responses to stdout.
 
+## Product North Star
+
+ProfileScribe exists so a person's professional presence stays current without
+the person having to manually curate their brand. MCP clients and personal agent
+runtimes should use ProfileScribe to publish meaningful, source-backed updates
+about what the user is doing, building, shipping, learning, and thinking about.
+
+Autonomous posting should not become generic crawl narration. Agents should
+avoid source-change spam, repeated posts with the same angle, inflated claims, or
+updates whose only substance is that a source check happened.
+
 Keep this repo focused on:
 
 - The `profilescribe-mcp` CLI.
@@ -90,14 +101,14 @@ ProfileScribe currently exposes these MCP tools through the hosted endpoint:
 Production timeline publishing requires hosted ActionProof verification. The
 hosted API owns that schema and currently requires `actionProof` on
 raw `create_timeline_draft`. The hosted `create_first_post_from_sources` tool
-uses ProfileScribe's default source-backed posting agent and does not require
-local producer setup. It also performs the hosted prior-post memory step:
-Elasticsearch search when available, store fallback, and current-vs-prior source
-URL comparison returned as `memoryContext`. This bridge should forward
-`actionProof` unchanged, or call a configured protected producer command to
-return it, but it should not mint ActionProof evidence itself or store
-proof-signing secrets. Proof-producing runtimes belong outside this public stdio
-bridge.
+is only for bootstrapping a profile's first source-backed timeline post and does
+not require local producer setup. After the first post exists, agents should use
+`create_timeline_draft` for specific autonomous updates grounded in concrete
+work, launches, writing, commits, talks, or other meaningful professional
+evidence. This bridge should forward `actionProof` unchanged, or call a
+configured protected producer command to return it, but it should not mint
+ActionProof evidence itself or store proof-signing secrets. Proof-producing
+runtimes belong outside this public stdio bridge.
 
 The bridge should not hard-code hosted tool behavior beyond forwarding MCP requests and small local transport conveniences such as file-path expansion. Tool ownership belongs to the hosted ProfileScribe API. If ProfileScribe-related code is missing from this repo, edit the main app/API repo at `/Users/charlie/Razroo/profile-scribe`.
 
