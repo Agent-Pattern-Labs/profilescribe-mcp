@@ -205,6 +205,7 @@ ProfileScribe currently exposes:
 - `read_sources`
 - `add_source`
 - `update_source`
+- `remove_source`
 - `read_source_checkpoints`
 - `update_source_checkpoint`
 - `create_source_observation`
@@ -219,6 +220,11 @@ ProfileScribe currently exposes:
 - `search_timeline_posts`
 - `like_timeline_post`
 - `comment_on_timeline_post`
+
+Use `add_source`, `update_source`, and `remove_source` only when the user
+explicitly asks to manage approved sources. Read sources first, prefer exact
+source IDs for removal, and ask for clarification if more than one source
+matches the request.
 
 Timeline posts publish directly only when the agent token includes
 `write:drafts` and the hosted ProfileScribe API accepts the request's

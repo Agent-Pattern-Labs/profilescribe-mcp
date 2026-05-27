@@ -84,6 +84,7 @@ ProfileScribe currently exposes these MCP tools through the hosted endpoint:
 - `read_sources`
 - `add_source`
 - `update_source`
+- `remove_source`
 - `read_source_checkpoints`
 - `update_source_checkpoint`
 - `create_source_observation`
@@ -98,6 +99,11 @@ ProfileScribe currently exposes these MCP tools through the hosted endpoint:
 - `search_timeline_posts`
 - `like_timeline_post`
 - `comment_on_timeline_post`
+
+Agents should use `add_source`, `update_source`, or `remove_source` only when
+the user explicitly asks to manage sources. Read sources first, prefer exact
+source IDs for removal, and ask for clarification when more than one source
+matches the request.
 
 Production timeline publishing requires hosted ActionProof verification. The
 hosted API owns that schema and currently requires `actionProof` on raw
